@@ -1,0 +1,213 @@
+---
+title: "CF Week 10 Project use of factors"
+author: "Carolyn Ford"
+date: '2022-05-15'
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo=FALSE)
+```
+
+```{r load packages, include=FALSE, message=FALSE, echo=FALSE}
+library(tidyverse)
+library(ggtext)
+library(skimr)
+library(janitor)
+library(car)
+```
+
+## Load, tidy and view data
+
+```{r view data, include=FALSE, message=FALSE, echo=FALSE}
+raw_data <- read_csv('http://www.minethatdata.com/Kevin_Hillstrom_MineThatData_E-MailAnalytics_DataMiningChallenge_2008.03.20.csv')
+
+lift_data <- raw_data %>% 
+  clean_names() %>% 
+  mutate(history_segment = as.factor(history_segment)) %>% 
+  mutate(zip_code = as.factor(zip_code)) %>% 
+  mutate(channel = as.factor(channel)) %>% 
+  mutate(segment = as.factor(segment)) %>% 
+  mutate(newbie = as.factor(newbie)) %>% 
+  mutate(occupancy = as.factor(case_when(
+  mens == 1 & womens == 0 ~ "Men only",
+  mens == 1 & womens == 1 ~ "Both men and women",
+  mens == 0 & womens == 1 ~ "Women only",
+  TRUE ~ NA_character_
+))) %>% 
+  select(-contains("mens")) %>% # removes unnecessary columns
+  relocate(occupancy, .after = history) %>% 
+  mutate(customer_value = history + spend)
+
+rm(raw_data)
+some(lift_data)
+```
+
+## Bar chart - recency of purchases in months
+
+```{r recency, echo=FALSE}
+lift_data %>% 
+  drop_na(recency) %>% 
+  count(recency) %>% 
+  mutate(recency = as.factor(recency)) %>% 
+  mutate(recency = fct_reorder(recency, n)) %>% 
+  ggplot(aes(x = n,
+             y = recency,
+             fill = recency)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = n),
+            hjust = 1.1,
+            color = "white") +
+  scale_fill_manual(values = c("1" = "#A8D8A8",
+                               "10" = "#00F0A8",
+                               "2" = "#D8F0C0",
+                               "9" = "#007848",
+                               "3" = "#609078",
+                               "4" = "#609048",
+                               "6" = "#00C0A8",
+                               "5" = "#90C0A8",
+                               "7" = "#A8C090",
+                               "11" = "#F0FFF0",
+                               "8" = "#A8FFA8",
+                               "12" = "#487830")) +
+  labs(title = "Most purchases are <span style='color:#A8D8A8'>one month ago</span>") +
+  theme_minimal() +
+  theme(plot.title = element_markdown())
+```
+
+## Bar chart - history segment
+
+```{r history segment, echo=FALSE}
+lift_data %>% 
+  drop_na(history_segment) %>% 
+  count(history_segment) %>% 
+  mutate(history_segment = fct_reorder(history_segment, n)) %>% 
+  ggplot(aes(x = n,
+             y = history_segment,
+             fill = history_segment)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = n),
+            hjust = 1.1,
+            color = "white") +
+  scale_fill_manual(values = c("1) $0 - $100" = "#A8D8A8",
+                               "2) $100 - $200" = "#00F0A8",
+                               "3) $200 - $350" = "#D8F0C0",
+                               "4) $350 - $500" = "#007848",
+                               "5) $500 - $750" = "#609078",
+                               "6) $750 - $1,000" = "#609048",
+                               "7) $1,000 +" = "#00C0A8")) +
+  labs(title = "Most purchases are in the <span style='color:#A8D8A8'>$0 - $100</span> segment") +
+  theme_minimal() +
+  theme(plot.title = element_markdown())
+```
+
+## Bar chart - occupancy
+
+```{r occupancy, echo=FALSE}
+lift_data %>% 
+  drop_na(occupancy) %>% 
+  count(occupancy) %>% 
+  mutate(occupancy = fct_reorder(occupancy, n)) %>% 
+  ggplot(aes(x = n,
+             y = occupancy,
+             fill = occupancy)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = n),
+            hjust = 1.1,
+            color = "white") +
+  scale_fill_manual(values = c("Men only" = "#A8D8A8",
+                               "Women only" = "#00F0A8",
+                               "Both men and women" = "#D8F0C0")) +
+  labs(title = "Most purchases are by the <span style='color:#A8D8A8'>Men only</span> households") +
+  theme_minimal() +
+  theme(plot.title = element_markdown())
+```
+
+## Bar chart - zip code
+
+```{r zipcode, echo=FALSE}
+lift_data %>% 
+  drop_na(zip_code) %>% 
+  count(zip_code) %>% 
+  mutate(zip_code = fct_reorder(zip_code, n)) %>% 
+  ggplot(aes(x = n,
+             y = zip_code,
+             fill = zip_code)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = n),
+            hjust = 1.1,
+            color = "white") +
+  scale_fill_manual(values = c("Rural" = "#A8D8A8",
+                               "Surburban" = "#00F0A8",
+                               "Urban" = "#D8F0C0")) +
+  labs(title = "Most purchases are by the <span style='color:#A8D8A8'>Suburban</span> households") +
+  theme_minimal() +
+  theme(plot.title = element_markdown())
+```
+
+## Bar chart - newbie
+
+```{r newbie, echo=FALSE}
+lift_data %>% 
+  drop_na(newbie) %>% 
+  count(newbie) %>% 
+  mutate(newbie = fct_reorder(newbie, n)) %>% 
+  ggplot(aes(x = n,
+             y = newbie,
+             fill = newbie)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = n),
+            hjust = 1.1,
+            color = "white") +
+  scale_fill_manual(values = c("0" = "#A8D8A8",
+                               "1" = "#00F0A8")) +
+  labs(title = "Slightly more purchases are by <span style='color:#A8D8A8'>newbies</span>") +
+  theme_minimal() +
+  theme(plot.title = element_markdown())
+```
+
+## Bar chart - channel
+
+```{r channel, echo=FALSE}
+lift_data %>% 
+  drop_na(channel) %>% 
+  count(channel) %>% 
+  mutate(channel = fct_reorder(channel, n)) %>% 
+  ggplot(aes(x = n,
+             y = channel,
+             fill = channel)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = n),
+            hjust = 1.1,
+            color = "white") +
+  scale_fill_manual(values = c("Multichannel" = "#A8D8A8",
+                               "Web" = "#00F0A8",
+                               "Phone" = "#D8F0C0")) +
+  labs(title = "Most purchases are by <span style='color:#A8D8A8'>Web</span>") +
+  theme_minimal() +
+  theme(plot.title = element_markdown())
+```
+
+## Bar chart - marketing campaign
+
+This is just to prove that we divided our customer base into three roughly equally segments/treatments for our marketing campaign, by type of treatment received.
+
+```{r marketing campaign, echo=FALSE}
+lift_data %>% 
+  drop_na(segment) %>% 
+  count(segment) %>% 
+  mutate(segment = fct_reorder(segment, n)) %>% 
+  ggplot(aes(x = n,
+             y = segment,
+             fill = segment)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = n),
+            hjust = 1.1,
+            color = "white") +
+  scale_fill_manual(values = c("Womens E-Mail" = "#A8D8A8",
+                               "Mens E-Mail" = "#00F0A8",
+                               "No E-Mail" = "#D8F0C0")) +
+  labs(title = "Our campaign had <span style='color:#A8D8A8'>3 </span>segments") +
+  theme_minimal() +
+  theme(plot.title = element_markdown())
+```
